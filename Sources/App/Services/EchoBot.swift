@@ -28,10 +28,10 @@ final class EchoBot: ServiceType {
     
         /// Setting up webhooks https://core.telegram.org/bots/webhooks
         /// Internal server address (Local IP), where server will starts
-        // settings.webhooksIp = "127.0.0.1"
+        //settings.webhooksConfig?.ip = "127.0.0.1"
         
         /// Internal server port, must be different from Vapor port
-        // settings.webhooksPort = 8181
+         //settings.webhooksConfig.webhooksPort = 8181
         
         /// External endpoint for your bot server
         // settings.webhooksUrl = "https://website.com/webhooks"
