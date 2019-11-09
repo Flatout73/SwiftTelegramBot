@@ -11,4 +11,8 @@ public func routes(_ router: Router) throws {
     let userController = UserController()
     router.get("users", use: userController.index)
     router.post("users", use: userController.create)
+    
+    router.get("_ah/health", use: { request in
+        return "OK"
+    })
 }

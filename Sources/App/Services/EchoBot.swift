@@ -123,7 +123,12 @@ final class EchoBot: ServiceType {
         guard let message = update.message,
                    let user = message.from else { return }
         
-        let santaUser = SantaUser(id: Int(user.id), name: "\(user.firstName) \(user.lastName)", telegramUsername: user.username)
+        let santaUser = SantaUser(id: Int(user.id),
+                                  name: user.firstName,
+                                  lastName: user.lastName,
+                                  telegramUsername: user.username,
+                                  desiredGift: nil,
+                                  santaForUser: nil)
         print(santaUser)
         container.requestPooledConnection(to: .psql).flatMap { conn in
             santaUser.create(on: conn).map { users in
