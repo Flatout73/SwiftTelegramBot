@@ -1,0 +1,15 @@
+runtime: custom
+env: flex
+manual_scaling:
+  instances: 1
+skip_files:
+- ^(.*/)?\.xcodeproj
+- ^(.*/)?\.build
+env_variables:
+  DB_USER: admin #postgres
+  DB_PASSWORD: ***REMOVED***
+  DB_DATABASE: secretsantaaita #aitasecretsanta
+  DB_IP: 104.155.14.177 #35.241.216.67
+  TELEGRAM_BOT_TOKEN: ***REMOVED***
+beta_settings:
+  cloud_sql_instances: ***REMOVED***

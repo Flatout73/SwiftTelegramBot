@@ -1,5 +1,5 @@
 import Vapor
-import FluentPostgreSQL
+import FluentMySQL
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
@@ -15,32 +15,32 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     ///Registering bot as a vapor service
     services.register(EchoBot.self)
     
-    try services.register(FluentPostgreSQLProvider())
+    try services.register(FluentMySQLProvider())
     
-    #if DEBUG
-    let pconfig = PostgreSQLDatabaseConfig(hostname: "localhost", port: 5432, username: "postgres", database: "secretsanta", password: "depo", transport: .cleartext)
-    #else
+//    #if DEBUG
+//    let pconfig = MySQLDatabaseConfig(hostname: "localhost", port: 5432, username: "postgres", password: "depo", database: "secretsanta")
+//    #else
     let DBUser = Environment.get("DB_USER") ?? ""
     let DBPassword = Environment.get("DB_PASSWORD") ?? ""
     let DBDatabase = Environment.get("DB_DATABASE") ?? ""
     let DBIP = Environment.get("DB_IP") ?? ""
-    let pconfig = PostgreSQLDatabaseConfig(hostname: DBIP, port: 5432, username: DBUser, database: DBDatabase, password: DBPassword, transport: .standardTLS)
-    #endif
-    let postgres = PostgreSQLDatabase(config: pconfig)
+    let pconfig = MySQLDatabaseConfig(hostname: DBIP, port: 3306, username: DBUser, password: DBPassword, database: DBDatabase)
+//    #endif
+    let postgres = MySQLDatabase(config: pconfig)
     
     var databases = DatabasesConfig()
-    databases.add(database: postgres, as: .psql)
+    databases.add(database: postgres, as: .mysql)
     services.register(databases)
     
     var migrations = MigrationConfig()
-    migrations.add(model: SantaUser.self, database: .psql)
+    migrations.add(model: SantaUser.self, database: .mysql)
     services.register(migrations)
     
     services.register(KeyedCache.self) { container in
-        try container.keyedCache(for: .psql)
+        try container.keyedCache(for: .mysql)
     }
     
-    config.prefer(DatabaseKeyedCache<ConfiguredDatabase<PostgreSQLDatabase>>.self, for: KeyedCache.self)
+    config.prefer(DatabaseKeyedCache<ConfiguredDatabase<MySQLDatabase>>.self, for: KeyedCache.self)
     
     ///Registering vapor routes
     let router = EngineRouter.default()

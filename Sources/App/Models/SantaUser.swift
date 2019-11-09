@@ -7,9 +7,9 @@
 
 import Foundation
 import Vapor
-import FluentPostgreSQL
+import FluentMySQL
 
-final class SantaUser: PostgreSQLModel {
+final class SantaUser: MySQLModel {
     var id: Int?
     var name: String
     var lastName: String?

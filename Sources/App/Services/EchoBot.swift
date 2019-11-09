@@ -8,7 +8,6 @@
 import Foundation
 import Telegrammer
 import Vapor
-import FluentPostgreSQL
 
 let helpMessage = """
 Type /register for participating.
@@ -130,11 +129,11 @@ final class EchoBot: ServiceType {
                                   desiredGift: nil,
                                   santaForUser: nil)
         print(santaUser)
-        container.requestPooledConnection(to: .psql).flatMap { conn in
+        container.requestPooledConnection(to: .mysql).flatMap { conn in
             santaUser.create(on: conn).map { users in
                 print("just found \(users) users")
             }.always {
-                try? self.container.releasePooledConnection(conn, to: .psql)
+                try? self.container.releasePooledConnection(conn, to: .mysql)
             }
         }
     }
