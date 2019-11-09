@@ -8,6 +8,7 @@
 import Foundation
 import Telegrammer
 import Vapor
+import FluentMySQL
 
 let helpMessage = """
 Type /register for participating.
@@ -90,11 +91,49 @@ final class EchoBot: ServiceType {
         let registerCommand = CommandHandler(commands: ["/register"], callback: registerHandler)
         dispatcher.add(handler: registerCommand)
         
+        let randomizeCommand = CommandHandler(commands: ["/randomize"], callback: randomizeHandler)
+        dispatcher.add(handler: randomizeCommand)
+        
+        let giftCommand = CommandHandler(commands: ["/gift"], callback: giftHandler)
+        dispatcher.add(handler: giftCommand)
+        
         ///Creating and adding handler for ordinary text messages
 //        let echoHandler = MessageHandler(filters: Filters.text, callback: echoResponse)
 //        dispatcher.add(handler: echoHandler)
         
         return dispatcher
+    }
+    
+    func giftHandler(_ update: Update, _ context: BotContext?) throws {
+        
+    }
+    
+    func randomizeHandler(_ update: Update, _ context: BotContext?) throws {
+        container.requestPooledConnection(to: .mysql).whenSuccess { conn in
+            let allUsersFuture = SantaUser.query(on: conn).all()
+            allUsersFuture.do { users in
+                var mutatedUsers = users.filter({ $0.santaForUser == nil })
+                mutatedUsers.shuffle()
+                for (i, user) in mutatedUsers.enumerated() {
+                    if i < mutatedUsers.count - 1 {
+                        user.santaForUser = mutatedUsers[i + 1].id
+                    } else {
+                        user.santaForUser = mutatedUsers[0].id
+                    }
+                    
+                    guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
+                    let message = """
+                        Congrats! You are santa for \(santaForUser.name) \(santaForUser.lastName ?? "") (\(santaForUser.telegramUsername ?? ""))
+                        He or She wants \"\(santaForUser.desiredGift ?? "...")\"
+                    """
+                    let params = Bot.SendMessageParams(chatId: .chat(Int64(id)), text: message)
+                    try? self.bot.sendMessage(params: params)
+                }
+            }.always {
+                try? self.container.releasePooledConnection(conn, to: .mysql)
+            }
+        }
+        
     }
     
     func rulesHandler(_ update: Update, _ context: BotContext?) throws {
@@ -122,19 +161,29 @@ final class EchoBot: ServiceType {
         guard let message = update.message,
                    let user = message.from else { return }
         
-        let santaUser = SantaUser(id: Int(user.id),
-                                  name: user.firstName,
-                                  lastName: user.lastName,
-                                  telegramUsername: user.username,
-                                  desiredGift: nil,
-                                  santaForUser: nil)
-        print(santaUser)
-        container.requestPooledConnection(to: .mysql).flatMap { conn in
-            santaUser.create(on: conn).map { users in
-                print("just found \(users) users")
-            }.always {
-                try? self.container.releasePooledConnection(conn, to: .mysql)
+        container.requestPooledConnection(to: .mysql).flatMap { conn -> Future<SantaUser?> in
+            let future: Future<SantaUser?> = SantaUser.find(Int(user.id), on: conn)
+                
+            future.thenThrowing { user in
+                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have already successfully registered.")
+                try self.bot.sendMessage(params: params)
+            }.whenFailure { error in
+                let santaUser = SantaUser(id: Int(user.id),
+                                          name: user.firstName,
+                                          lastName: user.lastName,
+                                          telegramUsername: user.username,
+                                          desiredGift: nil,
+                                          santaForUser: nil)
+                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered.")
+                try? self.bot.sendMessage(params: params)
+                santaUser.create(on: conn).map { users in
+                    print("just found \(users) users")
+                }.always {
+                    try? self.container.releasePooledConnection(conn, to: .mysql)
+                }
             }
+            
+            return future
         }
     }
 }

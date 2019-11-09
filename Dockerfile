@@ -12,4 +12,4 @@ WORKDIR /app
 RUN swift build --configuration release
 
 # Run the app
-ENTRYPOINT [".build/release/Run", "--hostname", "0.0.0.0", "--port", "8080"]
+ENTRYPOINT [".build/release/App", "--hostname", "0.0.0.0", "--port", "8080"]

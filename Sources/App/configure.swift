@@ -20,16 +20,16 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 //    #if DEBUG
 //    let pconfig = MySQLDatabaseConfig(hostname: "localhost", port: 5432, username: "postgres", password: "depo", database: "secretsanta")
 //    #else
-    let DBUser = Environment.get("DB_USER") ?? ""
-    let DBPassword = Environment.get("DB_PASSWORD") ?? ""
-    let DBDatabase = Environment.get("DB_DATABASE") ?? ""
-    let DBIP = Environment.get("DB_IP") ?? ""
+    let DBUser = "admin" //Environment.get("DB_USER") ?? ""
+    let DBPassword = "***REMOVED***" //Environment.get("DB_PASSWORD") ?? ""
+    let DBDatabase = "secretsantaaita" //Environment.get("DB_DATABASE") ?? ""
+    let DBIP = "104.155.14.177" //Environment.get("DB_IP") ?? "104.155.14.177"
     let pconfig = MySQLDatabaseConfig(hostname: DBIP, port: 3306, username: DBUser, password: DBPassword, database: DBDatabase)
 //    #endif
-    let postgres = MySQLDatabase(config: pconfig)
+    let mysql = MySQLDatabase(config: pconfig)
     
     var databases = DatabasesConfig()
-    databases.add(database: postgres, as: .mysql)
+    databases.add(database: mysql, as: .mysql)
     services.register(databases)
     
     var migrations = MigrationConfig()
