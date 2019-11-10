@@ -31,6 +31,8 @@ let registrationMessage = """
 You have successfully registered. Type /gift for selecting your gift.
 """
 
+let admins = ["flatout97", "as4astie"]
+
 final class SantaBot: ServiceType {
     let bot: Bot
     let container: Container
@@ -56,7 +58,7 @@ final class SantaBot: ServiceType {
         //settings.webhooksConfig.webhooksPort = 8181
         
         /// External endpoint for your bot server
-        settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-258422.appspot.com/webhooks", port: 8181)
+        settings.webhooksConfig = Webhooks.Config(ip: "127.0.0.1", url: "https://secretsanta-258422.appspot.com/webhooks", port: 8181)
         
         /// If you are using self-signed certificate, point it's filename
         //settings.webhooksPublicCert = "public.pem"
@@ -150,10 +152,14 @@ final class SantaBot: ServiceType {
     }
     
     fileprivate func setGiftFor(tuser: User, gift: String, messageID: Int64) {
-        container.requestPooledConnection(to: .mysql).flatMap { conn -> Future<SantaUser?> in
+        container.requestPooledConnection(to: .mysql).whenSuccess { conn in
             let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: conn)
             
             future.whenSuccess { user in
+                guard user?.santaForUser == nil else {
+                    self.sendMessage("You can no longer change your desired gift!", for: messageID)
+                    return
+                }
                 if let user = user {
                     user.desiredGift = gift
                     user.save(on: conn)
@@ -164,7 +170,9 @@ final class SantaBot: ServiceType {
                 }
             }
             
-            return future
+            future.always {
+                try? self.container.releasePooledConnection(conn, to: .mysql)
+            }
         }
     }
     
@@ -174,13 +182,17 @@ final class SantaBot: ServiceType {
         if let text = message.text?.components(separatedBy: .whitespaces)[1...].joined(separator: " "), !text.isEmpty {
             setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id)
         } else {
-            sendMessage("Incorrect desire. You should write \"/gift <your desire>\"", for: message.chat.id)
+            userRegisterSessions.insert(tuser.id)
         }
         
     }
     
     func randomizeHandler(_ update: Update, _ context: BotContext?) throws {
         guard let from = update.message?.from?.id else { return }
+        guard let name = update.message?.from?.username, admins.contains(name) else {
+            self.sendMessage("You don't have permissions", for: from)
+            return
+        }
         getUsers { users, conn in
             var mutatedUsers = users.filter({ $0.santaForUser == nil })
             guard mutatedUsers.count > 1 else {
@@ -196,10 +208,15 @@ final class SantaBot: ServiceType {
                 }
                 user.save(on: conn)
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
-                let message = """
-                Congrats! You are santa for \(santaForUser.name) \(santaForUser.lastName ?? "") (\(santaForUser.telegramUsername ?? ""))
-                He or She wants \"\(santaForUser.desiredGift ?? "...")\"
+                var message = """
+                Congrats! You are santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
                 """
+                if let username = santaForUser.telegramUsername {
+                    message += " (\(username))"
+                }
+                if let gift = santaForUser.desiredGift {
+                    message += "\nHe or She wants \"\(gift)\""
+                }
                 print("User \(user.id ?? -1) \(user.name) are santa for \(santaForUser.id ?? -1) \(santaForUser.name)")
                 self.sendMessage(message, for: Int64(id))
             }
@@ -228,12 +245,12 @@ final class SantaBot: ServiceType {
         guard let message = update.message,
                    let tuser = message.from else { return }
         
-        container.requestPooledConnection(to: .mysql).flatMap { conn -> Future<SantaUser?> in
+        container.requestPooledConnection(to: .mysql).whenSuccess { conn in
             let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: conn)
                 
             future.thenThrowing { user in
                 if user != nil {
-                    let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have already successfully registered.")
+                    let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have already successfully registered. Type /gift for changing desired gift.")
                     try self.bot.sendMessage(params: params)
                 }  else {
                     let santaUser = SantaUser(id: Int(tuser.id),
@@ -242,8 +259,8 @@ final class SantaBot: ServiceType {
                                               telegramUsername: tuser.username,
                                               desiredGift: nil,
                                               santaForUser: nil)
-                    let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $30)")
-                    try? self.bot.sendMessage(params: params)
+                    let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $25)")
+                    try self.bot.sendMessage(params: params)
                     santaUser.create(on: conn).map { user in
                         print("User \(user.name) \(user.lastName ?? "") registered")
                     }.always {
@@ -251,9 +268,9 @@ final class SantaBot: ServiceType {
                     }
                     self.userRegisterSessions.insert(tuser.id)
                 }
+            }.always {
+                try? self.container.releasePooledConnection(conn, to: .mysql)
             }
-            
-            return future
         }
     }
     

@@ -1,11 +1,11 @@
-# telegram-bot-template
+# AITA SantaBot
 
-## Template project for Telegram bot with Telegrammer and Vapor frameworks
+## Telegram bot for AITA's secret santa 2019
 
 ### Install with Vapor CLI
 
 ```
-$ vapor new MyBot --template=https://github.com/givip/telegram-bot-template
+$ vapor xcode
 ```
 
 ### Install without Vapor CLI
@@ -17,3 +17,8 @@ $ swift package generate-xcodeproj
 ```
 
 Choose *App* scheme in XCode and *MyMac* device and run.
+
+### Useful links
+
+[Swift bot's framework] (https://github.com/givip/Telegrammer)
+[Article about framework] (https://habr.com/ru/post/416023/)
