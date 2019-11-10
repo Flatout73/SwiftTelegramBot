@@ -188,7 +188,7 @@ final class SantaBot: ServiceType {
             setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id)
         } else {
             userRegisterSessions.insert(tuser.id)
-            self.sendMessage("Type your gift: ", for: tuser.id)
+            self.sendMessage("Type your wish: ", for: tuser.id)
         }
         
     }
@@ -215,7 +215,7 @@ final class SantaBot: ServiceType {
                 user.save(on: conn)
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
                 var message = """
-                Congrats! You are santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
+                Congrats! You are Santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
                 """
                 if let username = santaForUser.telegramUsername {
                     message += " (\(username))"
@@ -226,6 +226,8 @@ final class SantaBot: ServiceType {
                 print("User \(user.id ?? -1) \(user.name) are santa for \(santaForUser.id ?? -1) \(santaForUser.name)")
                 self.sendMessage(message, for: Int64(id))
             }
+            
+            self.sendMessage("Success!", for: from)
         }
     }
     
