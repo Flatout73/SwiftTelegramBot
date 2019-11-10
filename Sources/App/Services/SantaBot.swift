@@ -23,7 +23,7 @@ Type /register for participating.
 """
 
 let rulesMessage = """
-After submitting your name, please write down your desired gift (limit $30). You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else).
+After submitting your name, please write down your desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is $25.
 We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before November 20th.
 """
 
@@ -56,10 +56,10 @@ final class SantaBot: ServiceType {
         //settings.webhooksConfig.webhooksPort = 8181
         
         /// External endpoint for your bot server
-        // settings.webhooksUrl = "https://website.com/webhooks"
+        settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-258422.appspot.com/webhooks", port: 8181)
         
         /// If you are using self-signed certificate, point it's filename
-        // settings.webhooksPublicCert = "public.pem"
+        //settings.webhooksPublicCert = "public.pem"
         
         return try SantaBot(settings: settings, container: worker)
     }
@@ -158,6 +158,7 @@ final class SantaBot: ServiceType {
                     user.desiredGift = gift
                     user.save(on: conn)
                     self.sendMessage("Success!", for: messageID)
+                    print("Desired gift for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(gift)")
                 } else {
                     self.sendMessage("Fail! You should register in secret santa firstly through /register.", for: messageID)
                 }
@@ -199,6 +200,7 @@ final class SantaBot: ServiceType {
                 Congrats! You are santa for \(santaForUser.name) \(santaForUser.lastName ?? "") (\(santaForUser.telegramUsername ?? ""))
                 He or She wants \"\(santaForUser.desiredGift ?? "...")\"
                 """
+                print("User \(user.id ?? -1) \(user.name) are santa for \(santaForUser.id ?? -1) \(santaForUser.name)")
                 self.sendMessage(message, for: Int64(id))
             }
         }
@@ -242,8 +244,8 @@ final class SantaBot: ServiceType {
                                               santaForUser: nil)
                     let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $30)")
                     try? self.bot.sendMessage(params: params)
-                    santaUser.create(on: conn).map { users in
-                        print("just found \(users) users")
+                    santaUser.create(on: conn).map { user in
+                        print("User \(user.name) \(user.lastName ?? "") registered")
                     }.always {
                         try? self.container.releasePooledConnection(conn, to: .mysql)
                     }
@@ -260,7 +262,7 @@ final class SantaBot: ServiceType {
         do {
             try self.bot.sendMessage(params: params)
         } catch {
-            print(error)
+            print("Message error: ", error)
         }
     }
     

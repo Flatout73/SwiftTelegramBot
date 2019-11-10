@@ -6,6 +6,7 @@
 //
 
 import Vapor
+import Telegrammer
 
 public func routes(_ router: Router) throws {
     let userController = UserController()
@@ -13,6 +14,14 @@ public func routes(_ router: Router) throws {
     router.post("users", use: userController.create)
     
     router.get("_ah/health", use: { request in
+        return "OK"
+    })
+    
+    router.post("/webhooks", use: { request -> String in
+        guard let dispatcher = try request.make(SantaBot.self).dispatcher else { return "Error" }
+        try request.content.decode(Update.self).whenSuccess { update in
+            dispatcher.enqueue(updates: [update])
+        }
         return "OK"
     })
 }
