@@ -20,5 +20,6 @@ Choose *App* scheme in XCode and *MyMac* device and run.
 
 ### Useful links
 
-[Swift bot's framework] (https://github.com/givip/Telegrammer)
-[Article about framework] (https://habr.com/ru/post/416023/)
+[Swift bot's framework](https://github.com/givip/Telegrammer)
+
+[Article about framework](https://habr.com/ru/post/416023/)

@@ -48,7 +48,12 @@ final class SantaBot: ServiceType {
             throw CoreError(identifier: "Enviroment variables", reason: "Cannot find telegram bot token")
         }
         
+        #if DEBUG
         var settings = Bot.Settings(token: token, debugMode: true)
+        #else
+        var settings = Bot.Settings(token: token, debugMode: false)
+        #endif
+        
     
         /// Setting up webhooks https://core.telegram.org/bots/webhooks
         /// Internal server address (Local IP), where server will starts
@@ -128,7 +133,7 @@ final class SantaBot: ServiceType {
         guard let message = update.message,
             let tuser = message.from else { return }
         getUsers { users, _ in
-            var message: String = ""
+            var message: String = "Participants: "
             users.forEach { message += $0.name + " " + ($0.lastName ?? "") + "\n" }
             self.sendMessage(message, for: tuser.id)
         }
@@ -163,7 +168,7 @@ final class SantaBot: ServiceType {
                 if let user = user {
                     user.desiredGift = gift
                     user.save(on: conn)
-                    self.sendMessage("Success!", for: messageID)
+                    self.sendMessage("Success! Your gift is \(gift)", for: messageID)
                     print("Desired gift for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(gift)")
                 } else {
                     self.sendMessage("Fail! You should register in secret santa firstly through /register.", for: messageID)
@@ -183,6 +188,7 @@ final class SantaBot: ServiceType {
             setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id)
         } else {
             userRegisterSessions.insert(tuser.id)
+            self.sendMessage("Type your gift: ", for: tuser.id)
         }
         
     }
