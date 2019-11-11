@@ -6,10 +6,10 @@ skip_files:
 - ^(.*/)?\.xcodeproj
 - ^(.*/)?\.build
 env_variables:
-  DB_USER: "admin"
+  DB_USER: "server"
   DB_PASSWORD: "***REMOVED***"
-  DB_DATABASE: "secretsantaaita"
-  DB_IP: "104.155.14.177"
+  DB_DATABASE: "secretsantaaita_clone"
+  DB_IP: "34.76.67.95"
   TELEGRAM_BOT_TOKEN: "***REMOVED***"
 beta_settings:
-  cloud_sql_instances: "***REMOVED***"
+  cloud_sql_instances: "***REMOVED***-clone"

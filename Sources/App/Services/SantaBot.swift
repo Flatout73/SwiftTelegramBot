@@ -23,7 +23,7 @@ Type /register for participating.
 """
 
 let rulesMessage = """
-After submitting your name, please write down your desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is $25.
+After submitting your name, please write down your desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is **$25**.
 We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before November 20th.
 """
 
@@ -238,8 +238,8 @@ final class SantaBot: ServiceType {
     }
     
     func helpHandler(_ update: Update, _ context: BotContext?) throws {
-        guard let message = update.message,
-            let user = message.from else { return }
+        print("I get update: ", update)
+        guard let message = update.message else { return }
         sendMessage(helpMessage, for: message.chat.id)
     }
     
@@ -285,9 +285,16 @@ final class SantaBot: ServiceType {
     private func sendMessage(_ message: String, for id: Int64) {
         let params = Bot.SendMessageParams(chatId: .chat(id), text: message, parseMode: .markdown)
         do {
-            try self.bot.sendMessage(params: params)
+            try self.bot.sendMessage(params: params).whenFailure { error in
+                print("Message fail: ", error)
+            }
         } catch {
             print("Message error: ", error)
+            do {
+                try self.bot.sendMessage(params: params)
+            } catch {
+                print("Second message error: ", error)
+            }
         }
     }
     

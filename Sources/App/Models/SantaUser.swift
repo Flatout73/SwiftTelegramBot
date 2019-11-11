@@ -9,7 +9,7 @@ import Foundation
 import Vapor
 import FluentMySQL
 
-final class SantaUser: MySQLModel {
+final class SantaUser: MySQLModel, MySQLMigration, Content, Parameter {
     var id: Int?
     var name: String
     var lastName: String?
@@ -27,4 +27,14 @@ final class SantaUser: MySQLModel {
     }
 }
 
-extension SantaUser: Migration, Content, Parameter { }
+struct GiftMigration: MySQLMigration {
+    static func prepare(on conn: MySQLConnection) -> Future<Void> {
+        return conn.raw("""
+        ALTER TABLE SantaUser MODIFY COLUMN desiredGift TEXT;
+        """).run()
+    }
+    
+    static func revert(on conn: MySQLConnection) -> Future<Void> {
+        return conn.future(())
+    }
+}

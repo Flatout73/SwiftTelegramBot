@@ -18,7 +18,11 @@ public func routes(_ router: Router) throws {
     })
     
     router.post("/webhooks", use: { request -> String in
-        guard let dispatcher = try request.make(SantaBot.self).dispatcher else { return "Error" }
+        print("Webhook: ", request)
+        guard let dispatcher = try request.make(SantaBot.self).dispatcher else {
+            print("Dispatcher error")
+            return "Error"
+        }
         try request.content.decode(Update.self).whenSuccess { update in
             dispatcher.enqueue(updates: [update])
         }

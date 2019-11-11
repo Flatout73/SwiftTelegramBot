@@ -17,15 +17,15 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     
     try services.register(FluentMySQLProvider())
     
-    #if DEBUG
-    let pconfig = MySQLDatabaseConfig(hostname: "localhost", port: 3306, username: "root", password: "***REMOVED***", database: "secretsanta", transport: MySQLTransportConfig.unverifiedTLS)
-    #else
-    let DBUser = Environment.get("DB_USER") ?? "admin"
+//    #if DEBUG
+//    let pconfig = MySQLDatabaseConfig(hostname: "localhost", port: 3306, username: "root", password: "***REMOVED***", database: "secretsanta", transport: MySQLTransportConfig.unverifiedTLS)
+//    #else
+    let DBUser = Environment.get("DB_USER") ?? "server"
     let DBPassword = Environment.get("DB_PASSWORD") ?? "***REMOVED***"
-    let DBDatabase = Environment.get("DB_DATABASE") ?? "secretsantaaita"
-    let DBIP = Environment.get("DB_IP") ?? "104.155.14.177"
-    let pconfig = MySQLDatabaseConfig(hostname: DBIP, port: 3306, username: DBUser, password: DBPassword, database: DBDatabase)
-    #endif
+    let DBDatabase = Environment.get("DB_DATABASE") ?? "secretsantaaita_clone"
+    let DBIP = Environment.get("DB_IP") ?? "34.76.67.95"
+    let pconfig = MySQLDatabaseConfig(hostname: DBIP, port: 3306, username: DBUser, password: DBPassword, database: DBDatabase, characterSet: .utf8mb4_unicode_ci)
+//    #endif
     let mysql = MySQLDatabase(config: pconfig)
     
     var databases = DatabasesConfig()
@@ -34,6 +34,7 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     
     var migrations = MigrationConfig()
     migrations.add(model: SantaUser.self, database: .mysql)
+    migrations.add(migration: GiftMigration.self, database: .mysql)
     services.register(migrations)
     
     services.register(KeyedCache.self) { container in
