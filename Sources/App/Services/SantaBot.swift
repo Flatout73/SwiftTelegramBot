@@ -238,8 +238,11 @@ final class SantaBot: ServiceType {
     }
     
     func helpHandler(_ update: Update, _ context: BotContext?) throws {
-        print("I get update: ", update)
-        guard let message = update.message else { return }
+        print("I get update: ", update.message?.text)
+        guard let message = update.message else {
+            print("Message is nil")
+            return
+        }
         sendMessage(helpMessage, for: message.chat.id)
     }
     
@@ -283,6 +286,7 @@ final class SantaBot: ServiceType {
     }
     
     private func sendMessage(_ message: String, for id: Int64) {
+        print("Sending message: ", message)
         let params = Bot.SendMessageParams(chatId: .chat(id), text: message, parseMode: .markdown)
         do {
             try self.bot.sendMessage(params: params).whenFailure { error in
