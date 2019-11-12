@@ -158,9 +158,9 @@
         "package": "Telegrammer",
         "repositoryURL": "https://github.com/Flatout73/Telegrammer",
         "state": {
-          "branch": null,
-          "revision": "79c8199ae99ea2cb451e8a378f13efabb91a5a13",
-          "version": "0.5.4"
+          "branch": "master",
+          "revision": "be06e77dac0a1c0a67e6d5d6942a94686ee28644",
+          "version": null
         }
       },
       {

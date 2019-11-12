@@ -288,16 +288,18 @@ final class SantaBot: ServiceType {
     private func sendMessage(_ message: String, for id: Int64) {
         print("Sending message: ", message)
         let params = Bot.SendMessageParams(chatId: .chat(id), text: message, parseMode: .markdown)
-        do {
-            try self.bot.sendMessage(params: params).whenFailure { error in
-                print("Message fail: ", error)
-            }
-        } catch {
-            print("Message error: ", error)
+        container.eventLoop.scheduleTask(in: .seconds(1)) {
             do {
-                try self.bot.sendMessage(params: params)
+                try self.bot.sendMessage(params: params).whenFailure { error in
+                    print("Message fail: ", error.logMessage, (error as? NSError)?.userInfo, (error as? NSError), (error as? NSError)?.debugDescription)
+                    do {
+                        try self.bot.sendMessage(params: params)
+                    } catch {
+                        print("Second message error: ", error)
+                    }
+                }
             } catch {
-                print("Second message error: ", error)
+                print("Message error: ", error)
             }
         }
     }
