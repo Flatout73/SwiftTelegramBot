@@ -56,15 +56,6 @@
         }
       },
       {
-        "package": "FluentPostgreSQL",
-        "repositoryURL": "https://github.com/vapor/fluent-postgresql.git",
-        "state": {
-          "branch": null,
-          "revision": "8e3eb9d24d54ac58c8d04c194ad6b24f0b1b667e",
-          "version": "1.0.0"
-        }
-      },
-      {
         "package": "HTTP",
         "repositoryURL": "https://github.com/vapor/http.git",
         "state": {
@@ -89,15 +80,6 @@
           "branch": null,
           "revision": "8f2238dc48fa480ce6043ee0022ebe73c8ddc300",
           "version": "3.3.0"
-        }
-      },
-      {
-        "package": "PostgreSQL",
-        "repositoryURL": "https://github.com/vapor/postgresql.git",
-        "state": {
-          "branch": null,
-          "revision": "69ccf32e9164b207f9a773edac5433fe68ae3e5b",
-          "version": "1.5.0"
         }
       },
       {
@@ -174,7 +156,7 @@
       },
       {
         "package": "Telegrammer",
-        "repositoryURL": "https://github.com/givip/Telegrammer.git",
+        "repositoryURL": "https://github.com/Flatout73/Telegrammer",
         "state": {
           "branch": null,
           "revision": "79c8199ae99ea2cb451e8a378f13efabb91a5a13",

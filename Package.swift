@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "App",
     dependencies: [
-        .package(url: "https://github.com/givip/Telegrammer.git", from: "0.3.0"),
+        .package(url: "https://github.com/Flatout73/Telegrammer", from: "0.3.0"),
         .package(url: "https://github.com/vapor/vapor.git", from: "3.0.0"),
         .package(url: "https://github.com/vapor/fluent-mysql-driver.git", from: "3.0.0")
     ],
