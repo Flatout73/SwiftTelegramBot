@@ -110,11 +110,44 @@ final class SantaBot: ServiceType {
         let participantsCommand = CommandHandler(commands: ["/participants"], callback: participantsHandler)
         dispatcher.add(handler: participantsCommand)
         
+        let resendCommand = CommandHandler(commands: ["/resendMessages"], callback: resendHandler)
+        dispatcher.add(handler: resendCommand)
+        
         ///Creating and adding handler for ordinary text messages
         let message = MessageHandler(filters: Filters.text, callback: messageHandler)
         dispatcher.add(handler: message)
         
         return dispatcher
+    }
+    
+    func resendHandler(_ update: Update, _ context: BotContext?) throws {
+        guard let from = update.message?.from?.id else { return }
+        guard let name = update.message?.from?.username, admins.contains(name) else {
+            self.sendMessage("You don't have permissions", for: from)
+            return
+        }
+        getUsers { users, conn in
+            let sendingUsers = users.filter({ $0.santaForUser != nil })
+            for (i, user) in sendingUsers.enumerated() {
+                guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
+                var message = """
+                Congrats! You are Santa for \(santaForUser.name)
+                """
+                if let lastName = santaForUser.lastName {
+                    message += " \(lastName)"
+                }
+                if let username = santaForUser.telegramUsername {
+                    message += " (@\(username))"
+                }
+                if let gift = santaForUser.desiredGift {
+                    message += "\nHe or She wants \"\(gift)\""
+                }
+                print("User \(user.id ?? -1) \(user.name) are santa for \(santaForUser.id ?? -1) \(santaForUser.name)")
+                self.sendMessage(message, for: Int64(id))
+            }
+            
+            self.sendMessage("Success!", for: from)
+        }
     }
     
     func messageHandler(_ update: Update, _ context: BotContext?) throws {
@@ -287,7 +320,7 @@ final class SantaBot: ServiceType {
     
     private func sendMessage(_ message: String, for id: Int64) {
         print("Sending message: ", message)
-        let params = Bot.SendMessageParams(chatId: .chat(id), text: message, parseMode: .markdown)
+        let params = Bot.SendMessageParams(chatId: .chat(id), text: message)
         container.eventLoop.scheduleTask(in: .seconds(1)) {
             do {
                 try self.bot.sendMessage(params: params).whenFailure { error in
