@@ -24,7 +24,7 @@ Choose *App* scheme in XCode and *MyMac* device and run.
 
 [Article about framework](https://habr.com/ru/post/416023/)
 
-###TODO
-Change admins
-Add timer-reminder for choosing gifts
-Add check for russians gifts (should be only in english)
+### TODO
+* Change admins
+* Add timer-reminder for choosing gifts
+* Add check for russians gifts (should be only in english)
