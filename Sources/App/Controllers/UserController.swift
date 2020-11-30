@@ -6,15 +6,20 @@
 //
 
 import Vapor
+import Fluent
 
 class UserController {
-    func index(_ req: Request) throws -> Future<[SantaUser]> {
-        return SantaUser.query(on: req).all()
+    func index(on database: Database) throws -> EventLoopFuture<[SantaUser]> {
+        return SantaUser.query(on: database)
+            .all()
     }
     
-    func create(_ req: Request) throws -> Future<SantaUser> {
-        return try req.content.decode(SantaUser.self).flatMap { user in
-            return user.save(on: req)
-        }
+    func create(on request: Request) throws -> EventLoopFuture<SantaUser> {
+        let user = try request.content.decode(SantaUser.self)
+        return user.create(on: request.db)
+            .map { user }
+//        .flatMap { user in
+//            return user.save(on: request.db)
+//        }
     }
 }

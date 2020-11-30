@@ -8,7 +8,7 @@
 import Foundation
 import Telegrammer
 import Vapor
-import FluentMySQL
+import FluentMySQLDriver
 
 let helpMessage = """
 Type /register for participating.
@@ -33,55 +33,65 @@ You have successfully registered. Type /gift for selecting your gift.
 
 let admins = ["flatout97", "as4astie"]
 
-final class SantaBot: ServiceType {
+final class SantaMiddleware: TelegrammerMiddleware {
     let bot: Bot
-    let container: Container
+    let path: String
     var updater: Updater?
-    var dispatcher: Dispatcher?
+    lazy var dispatcher: Dispatcher = configureDispatcher()
+    let app: Application
+    private var database: Database {
+        app.db
+    }
     
-    /// Dictionary for user echo modes
+    /// Dictionary for user sessions
     var userRegisterSessions = Set<Int64>()
     
-    ///Conformance to `ServiceType` protocol, fabric methhod
-    static func makeService(for worker: Container) throws -> SantaBot {
-        guard let token = Environment.get("TELEGRAM_BOT_TOKEN") else {
-            throw CoreError(identifier: "Enviroment variables", reason: "Cannot find telegram bot token")
-        }
-        
-        #if DEBUG
-        var settings = Bot.Settings(token: token, debugMode: true)
-        #else
-        var settings = Bot.Settings(token: token, debugMode: false)
-        #endif
-        
-    
-        /// Setting up webhooks https://core.telegram.org/bots/webhooks
-        /// Internal server address (Local IP), where server will starts
-        //settings.webhooksConfig?.ip = "127.0.0.1"
-        
-        /// Internal server port, must be different from Vapor port
-        //settings.webhooksConfig.webhooksPort = 8181
-        
-        /// External endpoint for your bot server
-        settings.webhooksConfig = Webhooks.Config(ip: "127.0.0.1", url: "https://secretsanta-258422.appspot.com/webhooks", port: 8181)
-        
-        /// If you are using self-signed certificate, point it's filename
-        //settings.webhooksPublicCert = "public.pem"
-        
-        return try SantaBot(settings: settings, container: worker)
-    }
-    
-    init(settings: Bot.Settings, container: Container) throws {
+    public init(path: String, settings: Bot.Settings, app: Application) throws {
+        self.path = path
         self.bot = try Bot(settings: settings)
-        self.container = container
-        let dispatcher = try configureDispatcher()
-        self.dispatcher = dispatcher
-        self.updater = Updater(bot: bot, dispatcher: dispatcher)
+        self.app = app
     }
+    
+//    ///Conformance to `ServiceType` protocol, fabric methhod
+//    static func makeService(for worker: Container) throws -> SantaBot {
+//        guard let token = Environment.get("TELEGRAM_BOT_TOKEN") else {
+//            throw CoreError(identifier: "Enviroment variables", reason: "Cannot find telegram bot token")
+//        }
+//
+//        #if DEBUG
+//        var settings = Bot.Settings(token: token, debugMode: true)
+//        #else
+//        var settings = Bot.Settings(token: token, debugMode: false)
+//        #endif
+//
+//
+//        /// Setting up webhooks https://core.telegram.org/bots/webhooks
+//        /// Internal server address (Local IP), where server will starts
+//        //settings.webhooksConfig?.ip = "127.0.0.1"
+//
+//        /// Internal server port, must be different from Vapor port
+//        //settings.webhooksConfig.webhooksPort = 8181
+//
+//        /// External endpoint for your bot server
+//        settings.webhooksConfig = Webhooks.Config(ip: "127.0.0.1", url: "https://secretsanta-258422.appspot.com/webhooks", port: 8181)
+//
+//        /// If you are using self-signed certificate, point it's filename
+//        //settings.webhooksPublicCert = "public.pem"
+//
+//        return try SantaBot(settings: settings, container: worker)
+//    }
+////
+//    init(settings: Bot.Settings, container: Container) throws {
+//        self.bot = try Bot(settings: settings)
+//        self.container = container
+//        let dispatcher = try configureDispatcher()
+//        self.dispatcher = dispatcher
+//        self.updater = Updater(bot: bot, dispatcher: dispatcher)
+//    }
     
     /// Initializing dispatcher, object that receive updates from Updater
     /// and pass them throught handlers pipeline
-    func configureDispatcher() throws -> Dispatcher {
+    func configureDispatcher() -> Dispatcher {
         ///Dispatcher - handle all incoming messages
         let dispatcher = Dispatcher(bot: bot)
         
@@ -126,7 +136,7 @@ final class SantaBot: ServiceType {
             self.sendMessage("You don't have permissions", for: from)
             return
         }
-        getUsers { users, conn in
+        getUsers { users in
             let sendingUsers = users.filter({ $0.santaForUser != nil })
             for (i, user) in sendingUsers.enumerated() {
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
@@ -165,7 +175,7 @@ final class SantaBot: ServiceType {
     func participantsHandler(_ update: Update, _ context: BotContext?) throws {
         guard let message = update.message,
             let tuser = message.from else { return }
-        getUsers { users, _ in
+        getUsers { users in
             var message: String = "Participants: "
             users.forEach { message += $0.name + " " + ($0.lastName ?? "") + "\n" }
             self.sendMessage(message, for: tuser.id)
@@ -190,8 +200,8 @@ final class SantaBot: ServiceType {
     }
     
     fileprivate func setGiftFor(tuser: User, gift: String, messageID: Int64) {
-        container.requestPooledConnection(to: .mysql).whenSuccess { conn in
-            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: conn)
+        //container.requestPooledConnection(to: .mysql).whenSuccess { conn in
+            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
             
             future.whenSuccess { user in
                 guard user?.santaForUser == nil else {
@@ -200,7 +210,7 @@ final class SantaBot: ServiceType {
                 }
                 if let user = user {
                     user.desiredGift = gift
-                    user.save(on: conn)
+                    user.save(on: self.database)
                     self.sendMessage("Success! Your gift is \(gift)", for: messageID)
                     print("Desired gift for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(gift)")
                 } else {
@@ -208,10 +218,11 @@ final class SantaBot: ServiceType {
                 }
             }
             
-            future.always {
-                try? self.container.releasePooledConnection(conn, to: .mysql)
-            }
-        }
+//            future
+//                .always {
+//                try? self.container.releasePooledConnection(database, to: .mysql)
+//            }
+        //}
     }
     
     func giftHandler(_ update: Update, _ context: BotContext?) throws {
@@ -232,7 +243,7 @@ final class SantaBot: ServiceType {
             self.sendMessage("You don't have permissions", for: from)
             return
         }
-        getUsers { users, conn in
+        getUsers { users in
             var mutatedUsers = users.filter({ $0.santaForUser == nil })
             guard mutatedUsers.count > 1 else {
                 self.sendMessage("Not enough users", for: from)
@@ -245,7 +256,7 @@ final class SantaBot: ServiceType {
                 } else {
                     user.santaForUser = mutatedUsers[0].id
                 }
-                user.save(on: conn)
+                user.save(on: self.database)
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
                 var message = """
                 Congrats! You are Santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
@@ -289,10 +300,10 @@ final class SantaBot: ServiceType {
         guard let message = update.message,
                    let tuser = message.from else { return }
         
-        container.requestPooledConnection(to: .mysql).whenSuccess { conn in
-            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: conn)
+        //container.requestPooledConnection(to: .mysql).whenSuccess { conn in
+            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
                 
-            future.thenThrowing { user in
+        future.flatMapThrowing { user in
                 if user != nil {
                     let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have already successfully registered. Type /gift for changing desired gift.")
                     try self.bot.sendMessage(params: params)
@@ -305,23 +316,29 @@ final class SantaBot: ServiceType {
                                               santaForUser: nil)
                     let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $25)")
                     try self.bot.sendMessage(params: params)
-                    santaUser.create(on: conn).map { user in
-                        print("User \(user.name) \(user.lastName ?? "") registered")
-                    }.always {
-                        try? self.container.releasePooledConnection(conn, to: .mysql)
+                    
+                    santaUser.create(on: self.database).map { _ in
+                        print("User \(santaUser.name) \(santaUser.lastName ?? "") registered")
                     }
+//                    .always {
+//                        try? self.container.releasePooledConnection(conn, to: .mysql)
+//                    }
                     self.userRegisterSessions.insert(tuser.id)
                 }
-            }.always {
-                try? self.container.releasePooledConnection(conn, to: .mysql)
-            }
+//            }.always {
+//                try? self.container.releasePooledConnection(conn, to: .mysql)
+//            }
+        }
+        
+        future.whenFailure { error in
+            print(error)
         }
     }
     
     private func sendMessage(_ message: String, for id: Int64) {
         print("Sending message: ", message)
         let params = Bot.SendMessageParams(chatId: .chat(id), text: message)
-        container.eventLoop.scheduleTask(in: .seconds(1)) {
+        app.eventLoopGroup.next().scheduleTask(in: .seconds(1)) {
             do {
                 try self.bot.sendMessage(params: params).whenFailure { error in
                     print("Message fail: ", error.logMessage, (error as? NSError)?.userInfo, (error as? NSError), (error as? NSError)?.debugDescription)
@@ -337,15 +354,16 @@ final class SantaBot: ServiceType {
         }
     }
     
-    private func getUsers(completion: @escaping ([SantaUser], MySQLConnection) -> Void) {
-        container.requestPooledConnection(to: .mysql).whenSuccess { conn in
-            let allUsersFuture = SantaUser.query(on: conn).all()
-            allUsersFuture.do { users in
-                completion(users, conn)
-            }.always {
-                try? self.container.releasePooledConnection(conn, to: .mysql)
-            }
+    private func getUsers(completion: @escaping ([SantaUser]) -> Void) {
+        //container.requestPooledConnection(to: .mysql).whenSuccess { conn in
+        let allUsersFuture = SantaUser.query(on: database).all()
+        allUsersFuture.whenSuccess { users in
+            completion(users)
         }
+//            .always {
+//                try? self.container.releasePooledConnection(conn, to: .mysql)
+//            }
+       // }
     }
     
 }

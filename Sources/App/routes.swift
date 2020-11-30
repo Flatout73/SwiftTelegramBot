@@ -7,37 +7,51 @@
 
 import Vapor
 import Telegrammer
+import Fluent
 
 enum SantaError: Error {
     case dispatcher
 }
 
-public func routes(_ router: Router) throws {
+public func routes(_ app: Application) throws {
     let userController = UserController()
-    router.get("users", use: userController.index)
-    router.post("users", use: userController.create)
+    app.get("users") { request in
+        try userController.index(on: request.db)
+    }
+    app.post("users", use: userController.create)
     
-    router.get("_ah/health", use: { request in
+    app.get("_ah/health", use: { request throws -> String in
+        print("health")
         return "OK"
     })
     
-    router.post("/webhooks", use: { request throws -> String in
-        print("Webhook: ", request)
-        guard let dispatcher = try request.make(SantaBot.self).dispatcher else {
-            print("Dispatcher error")
-            throw SantaError.dispatcher
-        }
-        let future = try request.content.decode(Update.self)
-        future.whenSuccess { update in
-            print("Webhook OK", update.message?.text)
-            dispatcher.enqueue(updates: [update])
-        }
-        _ = future.thenIfErrorThrowing { error in
-            print("Parsing error: ", error)
-            print(request.content)
-            throw error
-        }
-
+    app.get("_ah/start", use: { request throws -> String in
+        print("health start")
         return "OK"
     })
+    
+    app.get("_ah/stop", use: { request throws -> String in
+        print("health stop")
+        return "OK"
+    })
+    
+//    app.post("/webhooks", use: { request throws -> String in
+//        print("Webhook: ", request)
+//        guard let dispatcher = try request.make(SantaBot.self).dispatcher else {
+//            print("Dispatcher error")
+//            throw SantaError.dispatcher
+//        }
+//        let future = try request.content.decode(Update.self)
+//        future.whenSuccess { update in
+//            print("Webhook OK", update.message?.text)
+//            dispatcher.enqueue(updates: [update])
+//        }
+//        _ = future.thenIfErrorThrowing { error in
+//            print("Parsing error: ", error)
+//            print(request.content)
+//            throw error
+//        }
+//
+//        return "OK"
+//    })
 }
