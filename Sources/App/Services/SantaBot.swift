@@ -95,7 +95,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
         }
         getUsers { users in
             let sendingUsers = users.filter({ $0.santaForUser != nil })
-            for (i, user) in sendingUsers.enumerated() {
+            for user in sendingUsers {
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
                 var message = """
                 Congrats! You are Santa for \(santaForUser.name)
@@ -110,7 +110,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
                     message += "\nHe or She wants \"\(gift)\""
                 }
                 print("User \(user.id ?? -1) \(user.name) are santa for \(santaForUser.id ?? -1) \(santaForUser.name)")
-                self.sendMessage(message, for: Int64(id))
+                self.sendMessage(message, for: Int64(id), with: 1)
             }
             
             self.sendMessage("Success!", for: from)
@@ -210,7 +210,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
                     message += "\nHe or She wants \"\(gift)\""
                 }
                 print("User \(user.id ?? -1) \(user.name) are santa for \(santaForUser.id ?? -1) \(santaForUser.name)")
-                self.sendMessage(message, for: Int64(id))
+                self.sendMessage(message, for: Int64(id), with: 1)
             }
             
             self.sendMessage("Finished!", for: from)
