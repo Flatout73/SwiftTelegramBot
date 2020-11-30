@@ -1,37 +1,34 @@
-//
-//  EchoBot.swift
-//  EchoBot
-//
-//  Created by Givi Pataridze on 31.05.2018.
-//
-
 import Foundation
 import Telegrammer
 import Vapor
 import FluentMySQLDriver
 
+let moneyLimit = 15
+
 let helpMessage = """
-Type /register for participating.
-If you have any questions about rules or policies telegram Anastasia @as4astie. Ping @flatout97 for questions about bot.
+Type /register <password> for participating.
+If you have any questions about rules or policies telegram Sasha @sashaborch. Ping @flatout97 for questions about bot.
 """
 
 let startMessage = """
 🎁🎄🎅SECRET SANTA🎅🎄🎁
 
 XoXo, New Year is coming! Let's create a holiday mood with gifts from Santa🎁🎄
-Type /register for participating.
+Type /register <password> for participating.
 """
 
 let rulesMessage = """
-After submitting your name, please write down your desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is **$25**.
-We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before November 20th.
+After registration, please write down your desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is **$\(moneyLimit)** or 1000 ₽.
+We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before Decmber 10th.
 """
 
 let registrationMessage = """
 You have successfully registered. Type /gift for selecting your gift.
 """
 
-let admins = ["flatout97", "as4astie"]
+let admins = ["flatout97", "sashaborch"]
+
+private let password = "***REMOVED***"
 
 final class SantaMiddleware: TelegrammerMiddleware {
     let bot: Bot
@@ -51,43 +48,6 @@ final class SantaMiddleware: TelegrammerMiddleware {
         self.bot = try Bot(settings: settings)
         self.app = app
     }
-    
-//    ///Conformance to `ServiceType` protocol, fabric methhod
-//    static func makeService(for worker: Container) throws -> SantaBot {
-//        guard let token = Environment.get("TELEGRAM_BOT_TOKEN") else {
-//            throw CoreError(identifier: "Enviroment variables", reason: "Cannot find telegram bot token")
-//        }
-//
-//        #if DEBUG
-//        var settings = Bot.Settings(token: token, debugMode: true)
-//        #else
-//        var settings = Bot.Settings(token: token, debugMode: false)
-//        #endif
-//
-//
-//        /// Setting up webhooks https://core.telegram.org/bots/webhooks
-//        /// Internal server address (Local IP), where server will starts
-//        //settings.webhooksConfig?.ip = "127.0.0.1"
-//
-//        /// Internal server port, must be different from Vapor port
-//        //settings.webhooksConfig.webhooksPort = 8181
-//
-//        /// External endpoint for your bot server
-//        settings.webhooksConfig = Webhooks.Config(ip: "127.0.0.1", url: "https://secretsanta-258422.appspot.com/webhooks", port: 8181)
-//
-//        /// If you are using self-signed certificate, point it's filename
-//        //settings.webhooksPublicCert = "public.pem"
-//
-//        return try SantaBot(settings: settings, container: worker)
-//    }
-////
-//    init(settings: Bot.Settings, container: Container) throws {
-//        self.bot = try Bot(settings: settings)
-//        self.container = container
-//        let dispatcher = try configureDispatcher()
-//        self.dispatcher = dispatcher
-//        self.updater = Updater(bot: bot, dispatcher: dispatcher)
-//    }
     
     /// Initializing dispatcher, object that receive updates from Updater
     /// and pass them throught handlers pipeline
@@ -113,9 +73,6 @@ final class SantaMiddleware: TelegrammerMiddleware {
         
         let giftCommand = CommandHandler(commands: ["/gift"], callback: giftHandler)
         dispatcher.add(handler: giftCommand)
-        
-        let santaCommand = CommandHandler(commands: ["/santa"], callback: santaHandler)
-        dispatcher.add(handler: santaCommand)
         
         let participantsCommand = CommandHandler(commands: ["/participants"], callback: participantsHandler)
         dispatcher.add(handler: participantsCommand)
@@ -176,53 +133,36 @@ final class SantaMiddleware: TelegrammerMiddleware {
         guard let message = update.message,
             let tuser = message.from else { return }
         getUsers { users in
-            var message: String = "Participants: "
-            users.forEach { message += $0.name + " " + ($0.lastName ?? "") + "\n" }
+            var message: String = "Participants:\n"
+            for (i, user) in users.enumerated() {
+                message += "\(i). \(user.name) \(user.lastName ?? "")\n"
+            }
             self.sendMessage(message, for: tuser.id)
         }
     }
     
-    func santaHandler(_ update: Update, _ context: BotContext?) throws {
-//        guard let message = update.message,
-//            let tuser = message.from else { return }
-//        container.requestPooledConnection(to: .mysql).flatMap { conn -> Future<SantaUser?> in
-//            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: conn)
-//            future.whenSuccess { user in
-//                if let user = user {
-//                    sendMessage(", for: <#T##Int64#>)
-//                } else {
-//
-//                }
-//            }
-//
-//            return future
-//        }
-    }
-    
     fileprivate func setGiftFor(tuser: User, gift: String, messageID: Int64) {
-        //container.requestPooledConnection(to: .mysql).whenSuccess { conn in
-            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
-            
-            future.whenSuccess { user in
-                guard user?.santaForUser == nil else {
-                    self.sendMessage("You can no longer change your desired gift!", for: messageID)
-                    return
-                }
-                if let user = user {
-                    user.desiredGift = gift
-                    user.save(on: self.database)
-                    self.sendMessage("Success! Your gift is \(gift)", for: messageID)
-                    print("Desired gift for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(gift)")
-                } else {
-                    self.sendMessage("Fail! You should register in secret santa firstly through /register.", for: messageID)
-                }
+        let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
+        
+        future.whenSuccess { user in
+            guard user?.santaForUser == nil else {
+                self.sendMessage("You can no longer change your desired gift!", for: messageID)
+                return
             }
-            
-//            future
-//                .always {
-//                try? self.container.releasePooledConnection(database, to: .mysql)
-//            }
-        //}
+            if let user = user {
+                user.desiredGift = gift
+                let future = user.save(on: self.database)
+                future.whenSuccess {
+                    self.sendMessage("Success! Your gift is \(user.desiredGift ?? "error")", for: messageID)
+                }
+                future.whenFailure { error in
+                    self.sendMessage(error.localizedDescription, for: messageID)
+                }
+                print("Desired gift for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(gift)")
+            } else {
+                self.sendMessage("Fail! You should register in secret santa firstly through /register.", for: messageID)
+            }
+        }
     }
     
     func giftHandler(_ update: Update, _ context: BotContext?) throws {
@@ -256,7 +196,9 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 } else {
                     user.santaForUser = mutatedUsers[0].id
                 }
-                user.save(on: self.database)
+                let future = user.save(on: self.database).whenFailure { error in
+                    self.sendMessage(error.localizedDescription, for: from)
+                }
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
                 var message = """
                 Congrats! You are Santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
@@ -271,7 +213,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 self.sendMessage(message, for: Int64(id))
             }
             
-            self.sendMessage("Success!", for: from)
+            self.sendMessage("Finished!", for: from)
         }
     }
     
@@ -299,35 +241,33 @@ final class SantaMiddleware: TelegrammerMiddleware {
     func registerHandler(_ update: Update, _ context: BotContext?) throws {
         guard let message = update.message,
                    let tuser = message.from else { return }
+        guard let components = message.text?.components(separatedBy: .whitespaces),
+              components.count > 1, components[1] == password else {
+            sendMessage("You should write password for registration. /register <password>", for: message.chat.id)
+            return
+        }
         
-        //container.requestPooledConnection(to: .mysql).whenSuccess { conn in
-            let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
+        let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
                 
-        future.flatMapThrowing { user in
-                if user != nil {
-                    let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have already successfully registered. Type /gift for changing desired gift.")
-                    try self.bot.sendMessage(params: params)
-                }  else {
-                    let santaUser = SantaUser(id: Int(tuser.id),
-                                              name: tuser.firstName,
-                                              lastName: tuser.lastName,
-                                              telegramUsername: tuser.username,
-                                              desiredGift: nil,
-                                              santaForUser: nil)
-                    let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $25)")
-                    try self.bot.sendMessage(params: params)
-                    
-                    santaUser.create(on: self.database).map { _ in
-                        print("User \(santaUser.name) \(santaUser.lastName ?? "") registered")
-                    }
-//                    .always {
-//                        try? self.container.releasePooledConnection(conn, to: .mysql)
-//                    }
-                    self.userRegisterSessions.insert(tuser.id)
+        _ = future.flatMapThrowing { user in
+            if user != nil {
+                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have already successfully registered. Type /gift for changing desired gift.")
+                try self.bot.sendMessage(params: params)
+            }  else {
+                let santaUser = SantaUser(id: Int(tuser.id),
+                                          name: tuser.firstName,
+                                          lastName: tuser.lastName,
+                                          telegramUsername: tuser.username,
+                                          desiredGift: nil,
+                                          santaForUser: nil)
+                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $\(moneyLimit)")
+                try self.bot.sendMessage(params: params)
+                
+                santaUser.create(on: self.database).whenSuccess { _ in
+                    print("User \(santaUser.name) \(santaUser.lastName ?? "") registered")
                 }
-//            }.always {
-//                try? self.container.releasePooledConnection(conn, to: .mysql)
-//            }
+                self.userRegisterSessions.insert(tuser.id)
+            }
         }
         
         future.whenFailure { error in
@@ -355,15 +295,10 @@ final class SantaMiddleware: TelegrammerMiddleware {
     }
     
     private func getUsers(completion: @escaping ([SantaUser]) -> Void) {
-        //container.requestPooledConnection(to: .mysql).whenSuccess { conn in
         let allUsersFuture = SantaUser.query(on: database).all()
         allUsersFuture.whenSuccess { users in
             completion(users)
         }
-//            .always {
-//                try? self.container.releasePooledConnection(conn, to: .mysql)
-//            }
-       // }
     }
     
 }

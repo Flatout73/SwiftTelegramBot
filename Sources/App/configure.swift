@@ -18,7 +18,7 @@ public func configure(_ app: Application) throws {
     
     ///Registering bot as a vapor service
     var settings = Bot.Settings(token: "***REMOVED***")
-    settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-cko2sgb62q-uc.a.run.app", port: 88)
+    settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-cko2sgb62q-uc.a.run.app/bot", port: 88)
 
     let santaMiddleware = try SantaMiddleware(path: "bot", settings: settings, app: app)
     app.middleware.use(santaMiddleware)
@@ -53,7 +53,11 @@ public func configure(_ app: Application) throws {
 
     app.databases.use(.mysql(configuration: pconfig), as: .mysql)
     app.migrations.add(CreateSantaUser())
-    //try app.autoMigrate().wait()
+    do {
+        try app.autoMigrate().wait()
+    } catch {
+        print(error.localizedDescription)
+    }
     
 //    services.register(KeyedCache.self) { container in
 //        try container.keyedCache(for: .mysql)
@@ -66,5 +70,9 @@ public func configure(_ app: Application) throws {
     try routes(app)
     //services.register(router, as: Router.self)
     
+    #if DEBUG
+    _ = try Updater(bot: santaMiddleware.bot, dispatcher: santaMiddleware.dispatcher).startLongpolling().wait()
+    #else
     _ = try Updater(bot: santaMiddleware.bot, dispatcher: santaMiddleware.dispatcher).startWebhooks().wait()
+    #endif
 }

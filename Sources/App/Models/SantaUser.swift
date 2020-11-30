@@ -27,7 +27,7 @@ final class SantaUser: Model, Content {
     
     init() { }
     
-    init(id: Int?, name: String, lastName: String?,
+    init(id: Int, name: String, lastName: String?,
          telegramUsername: String?, desiredGift: String?, santaForUser: Int?) {
         self.id = id
         self.name = name

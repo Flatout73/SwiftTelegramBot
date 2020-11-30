@@ -1,22 +1,10 @@
 # AITA SantaBot
 
-## Telegram bot for AITA's secret santa 2019
+## Telegram bot for AITA's secret santa 2020
 
-### Install with Vapor CLI
+Open folder using Xcode and wait till all packeges will be downloaded.
 
-```
-$ vapor xcode
-```
-
-### Install without Vapor CLI
-
-Clone this repository, then run
-```
-$ swift package resolve
-$ swift package generate-xcodeproj
-```
-
-Choose *App* scheme in XCode and *MyMac* device and run.
+Choose *Run* scheme in XCode and *My Mac* device and run.
 
 ### Useful links
 
