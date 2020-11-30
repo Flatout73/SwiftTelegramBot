@@ -135,7 +135,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
         getUsers { users in
             var message: String = "Participants:\n"
             for (i, user) in users.enumerated() {
-                message += "\(i). \(user.name) \(user.lastName ?? "")\n"
+                message += "\(i + 1). \(user.name) \(user.lastName ?? "") (@\(user.telegramUsername ?? "")\n"
             }
             self.sendMessage(message, for: tuser.id)
         }
@@ -275,22 +275,33 @@ final class SantaMiddleware: TelegrammerMiddleware {
         }
     }
     
-    private func sendMessage(_ message: String, for id: Int64) {
+    private func sendMessage(_ message: String, for id: Int64, with delay: Int64? = nil) {
         print("Sending message: ", message)
+        
+        if let delay = delay {
+            app.eventLoopGroup.next().scheduleTask(in: .seconds(delay)) { [weak self] in
+                self?.sendMessageWithRetry(message, for: id)
+            }
+        } else {
+            sendMessageWithRetry(message, for: id)
+        }
+    }
+    
+    private func sendMessageWithRetry(_ message: String, for id: Int64) {
         let params = Bot.SendMessageParams(chatId: .chat(id), text: message)
-        app.eventLoopGroup.next().scheduleTask(in: .seconds(1)) {
-            do {
-                try self.bot.sendMessage(params: params).whenFailure { error in
-                    print("Message fail: ", error.logMessage, (error as? NSError)?.userInfo, (error as? NSError), (error as? NSError)?.debugDescription)
+        do {
+            try self.bot.sendMessage(params: params).whenFailure { error in
+                print("Message fail: ", error.logMessage, (error as? NSError)?.userInfo, (error as? NSError), (error as? NSError)?.debugDescription)
+                self.app.eventLoopGroup.next().scheduleTask(in: .seconds(1)) {
                     do {
                         try self.bot.sendMessage(params: params)
                     } catch {
                         print("Second message error: ", error)
                     }
                 }
-            } catch {
-                print("Message error: ", error)
             }
+        } catch {
+            print("Message error: ", error)
         }
     }
     

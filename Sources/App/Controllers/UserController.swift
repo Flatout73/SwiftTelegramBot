@@ -18,8 +18,5 @@ class UserController {
         let user = try request.content.decode(SantaUser.self)
         return user.create(on: request.db)
             .map { user }
-//        .flatMap { user in
-//            return user.save(on: request.db)
-//        }
     }
 }

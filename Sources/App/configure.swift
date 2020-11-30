@@ -8,7 +8,8 @@ public func configure(_ app: Application) throws {
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))
     
     ///Registering bot as a vapor service
-    var settings = Bot.Settings(token: "***REMOVED***")
+    let botToken = Environment.get("BOT_TOKEN") ?? "***REMOVED***"
+    var settings = Bot.Settings(token: botToken)
     settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-cko2sgb62q-uc.a.run.app/bot", port: 88)
 
     let santaMiddleware = try SantaMiddleware(path: "bot", settings: settings, app: app)
