@@ -18,32 +18,42 @@ public func configure(_ app: Application) throws {
     
     ///Registering bot as a vapor service
     var settings = Bot.Settings(token: "***REMOVED***")
-    settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://test.url", port: 88)
+    settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-cko2sgb62q-uc.a.run.app", port: 88)
 
     let santaMiddleware = try SantaMiddleware(path: "bot", settings: settings, app: app)
     app.middleware.use(santaMiddleware)
+    //try santaMiddleware.setWebhooks()
     
-    let dconfig: MySQLConfiguration = {
     #if DEBUG
     let pconfig = MySQLConfiguration(hostname: "127.0.0.1", port: 3306,
                                      username: "debuguser",
                                      password: "***REMOVED***",
                                      database: "secretsanta",
                                      tlsConfiguration: .forClient(certificateVerification: .none))
-    return pconfig
     #else
-    let DBUser = Environment.get("DB_USER")                                                                             ?? "server"
-    let DBPassword = Environment.get("DB_PASSWORD")                                                                     ?? "***REMOVED***"
-    let DBDatabase = Environment.get("DB_DATABASE")                                                                      ?? "secretsantaaita_clone"
-    let DBIP = Environment.get("DB_IP")                                                                                     ?? "34.76.67.95"
-    let pconfig = MySQLDatabaseConfig(hostname: DBIP, port: 3306, username: DBUser,
-                                      password: DBPassword, database: DBDatabase, characterSet: .utf8mb4_unicode_ci)
+//    let DBUser = Environment.get("DB_USER")                                                                             ?? "server"
+//    let DBPassword = Environment.get("DB_PASSWORD")                                                                     ?? "***REMOVED***"
+//    let DBDatabase = Environment.get("DB_DATABASE")                                                                      ?? "secretsantaaita_clone"
+//    let DBIP = Environment.get("DB_IP")                                                                                     ?? "34.76.67.95"
+//    let pconfig = MySQLConfiguration(hostname: DBIP, port: 3306,
+//                                     username: DBUser,
+//                                     password: DBPassword,
+//                                     database: DBDatabase)
+    let DBUser = Environment.get("DB_USER")!
+    let DBPassword = Environment.get("DB_PASS")!
+    let DBDatabase = Environment.get("DB_NAME")!
+    let socketDir = Environment.get("DB_SOCKET_DIR") ?? "/cloudsql"
+    let connection_name = Environment.get("CLOUD_SQL_CONNECTION_NAME")!
+    print("socketPath", "\(socketDir)/\(connection_name)")
+    let pconfig = MySQLConfiguration(unixDomainSocketPath: "\(socketDir)/\(connection_name)",
+                                     username: DBUser,
+                                     password: DBPassword,
+                                     database: DBDatabase)
     #endif
-    }()
 
-    app.databases.use(.mysql(configuration: dconfig), as: .mysql)
+    app.databases.use(.mysql(configuration: pconfig), as: .mysql)
     app.migrations.add(CreateSantaUser())
-    try app.autoMigrate().wait()
+    //try app.autoMigrate().wait()
     
 //    services.register(KeyedCache.self) { container in
 //        try container.keyedCache(for: .mysql)
@@ -56,5 +66,5 @@ public func configure(_ app: Application) throws {
     try routes(app)
     //services.register(router, as: Router.self)
     
-    _ = try Updater(bot: santaMiddleware.bot, dispatcher: santaMiddleware.dispatcher).startLongpolling().wait()
+    _ = try Updater(bot: santaMiddleware.bot, dispatcher: santaMiddleware.dispatcher).startWebhooks().wait()
 }

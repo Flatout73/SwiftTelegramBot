@@ -9,7 +9,8 @@ let package = Package(
         .macOS(.v10_15)
     ],
     products: [
-        .executable(name: "aita-secret-santa", targets: ["App"])
+        .executable(name: "Run", targets: ["Run"]),
+        .library(name: "App", targets: ["App"])
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/vapor.git", from: "4.36.0"),
@@ -19,11 +20,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "App", dependencies: [
-            .product(name: "Fluent", package: "fluent"),
-            .product(name: "FluentMySQLDriver", package: "fluent-mysql-driver"),
-            .product(name: "Vapor", package: "vapor"),
+            .product(name: "Fluent"),
+            .product(name: "FluentMySQLDriver"),
+            .product(name: "Vapor"),
             .product(name: "Telegrammer")
-        ])
+        ]),
+        .target(name: "Run", dependencies: ["App"]),
     ]
 )
 
