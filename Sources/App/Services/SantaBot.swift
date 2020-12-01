@@ -277,7 +277,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 Congrats! You are Santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
                 """
                 if let username = santaForUser.telegramUsername {
-                    message += " (\(username))"
+                    message += " (@\(username))"
                 }
                 if let gift = santaForUser.desiredGift {
                     message += "\nHe or She wants \"\(gift)\""
