@@ -41,6 +41,7 @@ public func configure(_ app: Application) throws {
 
     app.databases.use(.mysql(configuration: pconfig), as: .mysql)
     app.migrations.add(CreateSantaUser())
+    //app.migrations.add(AddressUserUpdate())
     do {
         try app.autoMigrate().wait()
     } catch {

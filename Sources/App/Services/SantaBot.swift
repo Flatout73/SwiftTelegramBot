@@ -18,12 +18,16 @@ Type /register <password> for participating.
 """
 
 let rulesMessage = """
-After registration, please write down your desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is **$\(moneyLimit)** or 1000 ₽.
+After registration, please write down your address and desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is **$\(moneyLimit)** or 1000 ₽.
 We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before Decmber 10th.
+
+
+This year let's send gifts with mail - to make it easier choose gifts via ozon.ru if your mate lives in Russia/Ukraine, or Amazon.com if your mate lives in US/Canada/Europe if you need help - ask Sasha. Type /address for entering your delivery address.
 """
 
 let registrationMessage = """
-You have successfully registered. Type /gift for selecting your gift.
+You have successfully registered. Type /gift for changing your gift and /address for changing your delivery address in any time before randomize.
+What do you want as a gift? (limit $\(moneyLimit))
 """
 
 let admins = ["flatout97", "sashaborch"]
@@ -40,8 +44,9 @@ final class SantaMiddleware: TelegrammerMiddleware {
         app.db
     }
     
-    /// Dictionary for user sessions
     var userRegisterSessions = Set<Int64>()
+    var userGiftSessions = Set<Int64>()
+    var userAddressSessions = Set<Int64>()
     
     public init(path: String, settings: Bot.Settings, app: Application) throws {
         self.path = path
@@ -73,6 +78,9 @@ final class SantaMiddleware: TelegrammerMiddleware {
         
         let giftCommand = CommandHandler(commands: ["/gift"], callback: giftHandler)
         dispatcher.add(handler: giftCommand)
+        
+        let addressCommand = CommandHandler(commands: ["/address"], callback: addressHandler)
+        dispatcher.add(handler: addressCommand)
         
         let participantsCommand = CommandHandler(commands: ["/participants"], callback: participantsHandler)
         dispatcher.add(handler: participantsCommand)
@@ -121,11 +129,24 @@ final class SantaMiddleware: TelegrammerMiddleware {
         guard let message = update.message,
             let tuser = message.from else { return }
         
-        if userRegisterSessions.contains(tuser.id), let text = message.text {
-            setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id)
+        let isRegistration = userRegisterSessions.contains(tuser.id)
+        if isRegistration || userGiftSessions.contains(tuser.id), let text = message.text {
+            setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id) { [weak self] success in
+                guard success else { return }
+                if isRegistration {
+                    self?.sendMessage("Write your delivery address", for: message.chat.id)
+                }
+            }
+            userGiftSessions.remove(tuser.id)
+            if isRegistration {
+                userAddressSessions.insert(tuser.id)
+            }
             userRegisterSessions.remove(tuser.id)
+        } else if userAddressSessions.contains(tuser.id), let text = message.text {
+            setAddress(tuser: tuser, address: text, messageID: message.chat.id)
+            userAddressSessions.remove(tuser.id)
         } else {
-             sendMessage(helpMessage, for: message.chat.id)
+            sendMessage(helpMessage, for: message.chat.id)
         }
     }
     
@@ -135,13 +156,13 @@ final class SantaMiddleware: TelegrammerMiddleware {
         getUsers { users in
             var message: String = "Participants:\n"
             for (i, user) in users.enumerated() {
-                message += "\(i + 1). \(user.name) \(user.lastName ?? "") (@\(user.telegramUsername ?? "")\n"
+                message += "\(i + 1). \(user.name) \(user.lastName ?? "") (@\(user.telegramUsername ?? ""))\n"
             }
             self.sendMessage(message, for: tuser.id)
         }
     }
     
-    fileprivate func setGiftFor(tuser: User, gift: String, messageID: Int64) {
+    fileprivate func setGiftFor(tuser: User, gift: String, messageID: Int64, completion: ((Bool) -> Void)? = nil) {
         let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
         
         future.whenSuccess { user in
@@ -154,9 +175,11 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 let future = user.save(on: self.database)
                 future.whenSuccess {
                     self.sendMessage("Success! Your gift is \(user.desiredGift ?? "error")", for: messageID)
+                    completion?(true)
                 }
                 future.whenFailure { error in
                     self.sendMessage(error.localizedDescription, for: messageID)
+                    completion?(false)
                 }
                 print("Desired gift for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(gift)")
             } else {
@@ -171,10 +194,43 @@ final class SantaMiddleware: TelegrammerMiddleware {
         if let text = message.text?.components(separatedBy: .whitespaces)[1...].joined(separator: " "), !text.isEmpty {
             setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id)
         } else {
-            userRegisterSessions.insert(tuser.id)
+            userGiftSessions.insert(tuser.id)
             self.sendMessage("Type your wish: ", for: tuser.id)
         }
+    }
+    
+    private func setAddress(tuser: User, address: String, messageID: Int64) {
+        let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
         
+        future.whenSuccess { user in
+            guard user?.santaForUser == nil else {
+                self.sendMessage("You can no longer change your address!", for: messageID)
+                return
+            }
+            if let user = user {
+                user.address = address
+                let future = user.save(on: self.database)
+                future.whenSuccess {
+                    self.sendMessage("Success! Your address is \(user.address ?? "error")", for: messageID)
+                }
+                future.whenFailure { error in
+                    self.sendMessage(error.localizedDescription, for: messageID)
+                }
+                print("Address for user \(user.id ?? -1) \(user.telegramUsername ?? "") - \(address)")
+            } else {
+                self.sendMessage("Fail! You should register in secret santa firstly through /register.", for: messageID)
+            }
+        }
+    }
+    
+    func addressHandler(_ update: Update, _ context: BotContext?) throws {
+        guard let message = update.message,
+            let tuser = message.from else { return }
+        if let text = message.text?.components(separatedBy: .whitespaces)[1...].joined(separator: " "), !text.isEmpty {
+            setAddress(tuser: tuser, address: text, messageID: message.chat.id)
+        } else {
+            self.sendMessage("Error! Set address using: /address <your address>", for: tuser.id)
+        }
     }
     
     func randomizeHandler(_ update: Update, _ context: BotContext?) throws {
@@ -260,7 +316,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
                                           telegramUsername: tuser.username,
                                           desiredGift: nil,
                                           santaForUser: nil)
-                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have successfully registered. What do you want as a gift? (limit $\(moneyLimit)")
+                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: registrationMessage)
                 try self.bot.sendMessage(params: params)
                 
                 santaUser.create(on: self.database).whenSuccess { _ in

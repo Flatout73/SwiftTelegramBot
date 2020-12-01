@@ -22,6 +22,8 @@ final class SantaUser: Model, Content {
     var telegramUsername: String?
     @OptionalField(key: "desiredGift")
     var desiredGift: String?
+    @OptionalField(key: "address")
+    var address: String?
     @OptionalField(key: "santaForUser")
     var santaForUser: Int?
     
@@ -47,13 +49,23 @@ struct CreateSantaUser: Migration {
             .field("telegramUsername", .string)
             .field("desiredGift", .custom("TEXT"))
             .field("santaForUser", .int64)
+            .field("address", .custom("TEXT"))
             .create()
-//        return database.execute(enum: DatabaseEnum.init(name: )).raw("""
-//        ALTER TABLE SantaUser MODIFY COLUMN desiredGift TEXT;
-//        """).run()
     }
     
     func revert(on database: Database) -> EventLoopFuture<Void> {
-        return database.schema("device_tokens").delete()
+        return database.schema(SantaUser.schema).delete()
+    }
+}
+
+struct AddressUserUpdate: Migration {
+    func prepare(on database: Database) -> EventLoopFuture<Void> {
+        return database.schema(SantaUser.schema)
+            .field("address", .custom("TEXT"))
+            .update()
+    }
+    
+    func revert(on database: Database) -> EventLoopFuture<Void> {
+        return database.schema(SantaUser.schema).delete()
     }
 }

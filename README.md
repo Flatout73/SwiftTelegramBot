@@ -12,6 +12,12 @@ Choose *Run* scheme in XCode and *My Mac* device and run.
 
 [Article about framework](https://habr.com/ru/post/416023/)
 
+[Deploy on App Engine](https://www.alfianlosari.com/posts/serverless-google-app-engine-with-custom-docker-and-swift-vapor/)
+
+[Deploy on Cloud Run](https://medium.com/@cweinberger/serverless-server-side-swift-using-google-cloud-run-2b314ce74293)
+
+[Connect to database](https://cloud.google.com/sql/docs/mysql/connect-run#java)
+
 ### TODO
 * Change admins
 * Add timer-reminder for choosing gifts
