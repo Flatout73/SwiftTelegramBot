@@ -96,6 +96,9 @@ final class SantaMiddleware: TelegrammerMiddleware {
         let resendCommand = CommandHandler(commands: ["/resendMessages"], callback: resendHandler)
         dispatcher.add(handler: resendCommand)
         
+        let infoCommand = CommandHandler(commands: ["/info"], callback: infoHandler)
+        dispatcher.add(handler: infoCommand)
+        
         ///Creating and adding handler for ordinary text messages
         let message = MessageHandler(filters: Filters.text, callback: messageHandler)
         dispatcher.add(handler: message)
@@ -163,7 +166,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
             setGiftFor(tuser: tuser, gift: text, messageID: message.chat.id)
             userGiftSessions.remove(tuser.id)
         } else {
-            sendMessage(helpMessage, for: message.chat.id)
+            sendMessage("Error!\n\(rulesMessage)", for: message.chat.id)
         }
     }
     
@@ -269,7 +272,8 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 } else {
                     user.santaForUser = mutatedUsers[0].id
                 }
-                let future = user.save(on: self.database).whenFailure { error in
+                let future = user.save(on: self.database)
+                future.whenFailure { error in
                     self.sendMessage(error.localizedDescription, for: from)
                 }
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
@@ -349,6 +353,33 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 }
                 
                 try self.register(tuser: tuser, for: message.chat.id)
+            }
+        }
+        
+        future.whenFailure { error in
+            print(error)
+        }
+    }
+    
+    func infoHandler(_ update: Update, _ context: BotContext?) throws {
+        guard let message = update.message,
+                   let tuser = message.from else { return }
+        let future: Future<SantaUser?> = SantaUser.find(Int(tuser.id), on: database)
+        
+        _ = future.flatMapThrowing { user in
+            if let user = user {
+                var info = "Your info:\nName: \(user.name)"
+                if let gift = user.desiredGift {
+                    info += "\nYour gift is \(gift)"
+                }
+                if let address = user.address {
+                    info += "\nYour address is \(address)"
+                }
+                
+                self.sendMessage(info, for: message.chat.id)
+            } else {
+                let params = Bot.SendMessageParams(chatId: .chat(message.chat.id), text: "You have not registered!")
+                try self.bot.sendMessage(params: params)
             }
         }
         
