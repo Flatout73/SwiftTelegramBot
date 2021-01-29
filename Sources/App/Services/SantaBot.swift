@@ -272,10 +272,7 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 } else {
                     user.santaForUser = mutatedUsers[0].id
                 }
-                let future = user.save(on: self.database)
-                future.whenFailure { error in
-                    self.sendMessage(error.localizedDescription, for: from)
-                }
+
                 guard let santaForUser = users.first(where: { $0.id == user.santaForUser }), let id = user.id else { continue }
                 var message = """
                 Congrats! You are Santa for \(santaForUser.name) \(santaForUser.lastName ?? "")
@@ -293,6 +290,13 @@ final class SantaMiddleware: TelegrammerMiddleware {
                 self.sendMessage(message, for: Int64(id), with: 1)
             }
             
+            //Check this command on 40+ users in cloud run, because previosly it is crashed when i try save every user separately.
+            //https://github.com/vapor/fluent-kit/issues/114
+            //https://theswiftdev.com/get-started-with-the-fluent-orm-framework-in-vapor-4/
+            let future = mutatedUsers.map { $0.save(on: self.database) }.flatten(on: self.app.eventLoopGroup.next())
+            future.whenFailure { error in
+                self.sendMessage(error.localizedDescription, for: from)
+            }
             self.sendMessage("Finished!", for: from)
         }
     }
@@ -422,6 +426,9 @@ final class SantaMiddleware: TelegrammerMiddleware {
         let allUsersFuture = SantaUser.query(on: database).all()
         allUsersFuture.whenSuccess { users in
             completion(users)
+        }
+        allUsersFuture.whenFailure { error in
+            print(error.localizedDescription)
         }
     }
     
