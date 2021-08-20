@@ -7,7 +7,7 @@ let moneyLimit = 15
 
 let helpMessage = """
 Type /register <password> for participating.
-If you have any questions about rules or policies telegram Sasha @sashaborch. Ping @flatout97 for questions about bot.
+Ping @flatout97 for questions about bot.
 """
 
 let startMessage = """
@@ -21,22 +21,21 @@ let rulesMessage = """
 After registration, please write down your address and desired gift. You can change your desired gift through `/gift <desired gift>` (your Santa will consider, but can surprise you with something else). The limit per one gift is **$\(moneyLimit)** or 1000 ₽.
 We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before Decmber 10th.
 
-
-This year let's send gifts with mail - to make it easier choose gifts via ozon.ru if your mate lives in Russia/Ukraine, or Amazon.com if your mate lives in US/Canada/Europe if you need help - ask Sasha. Type /address for entering your delivery address.
+Type /address for entering your delivery address.
 """
 
 let registrationMessage = """
 You have successfully registered. Type /gift for changing your gift and /address for changing your delivery address in any time before randomize. Your Santa will consider, but can surprise you with something else. The limit per one gift is $\(moneyLimit) or 1000 ₽.
 We will make sure that we have all the participants entered in the system and you will find out who you are Santa to on or before December 10th.
 
-If you have any questions about rules or policies telegram Sasha @sashaborch. Ping @flatout97 for questions about bot.
+Ping @flatout97 for questions about bot.
 
 What do you want as a gift? (limit $\(moneyLimit))
 """
 
-let admins = ["flatout97", "sashaborch"]
+let admins = ["flatout97"]
 
-private let password = "***REMOVED***"
+private let password = "12345678"
 
 final class SantaMiddleware: TelegrammerMiddleware {
     enum UserState {

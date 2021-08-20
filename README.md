@@ -1,4 +1,4 @@
-# AITA SantaBot
+# SantaBot
 
 ## Telegram bot for AITA's secret santa 2020
 
