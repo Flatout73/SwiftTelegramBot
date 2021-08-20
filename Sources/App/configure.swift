@@ -8,9 +8,9 @@ public func configure(_ app: Application) throws {
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))
     
     ///Registering bot as a vapor service
-    let botToken = Environment.get("BOT_TOKEN") ?? "***REMOVED***"
+    let botToken = Environment.get("BOT_TOKEN")
     var settings = Bot.Settings(token: botToken)
-    settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "https://secretsanta-cko2sgb62q-uc.a.run.app/bot", port: 88)
+    settings.webhooksConfig = Webhooks.Config(ip: "0.0.0.0", url: "<url>", port: 88)
 
     let santaMiddleware = try SantaMiddleware(path: "bot", settings: settings, app: app)
     app.middleware.use(santaMiddleware)
@@ -19,7 +19,7 @@ public func configure(_ app: Application) throws {
     #if DEBUG
     let pconfig = MySQLConfiguration(hostname: "127.0.0.1", port: 3306,
                                      username: "debuguser",
-                                     password: "***REMOVED***",
+                                     password: "qwerty123",
                                      database: "secretsanta",
                                      tlsConfiguration: .forClient(certificateVerification: .none))
     #else
